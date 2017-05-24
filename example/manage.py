@@ -1,8 +1,8 @@
 # manage.py
 
 from flask import Flask
-from flask.ext.script import Manager
-from flask.ext.dbshell import DbShell
+from flask_script import Manager
+from flask_dbshell import DbShell
 
 
 class DevConfig(object):
@@ -13,12 +13,10 @@ app = Flask(__name__)
 app.config.from_object(DevConfig)
 manager = Manager(app)
 
+manager.add_command('dbshell', DbShell())
 
-@manager.command
-def dbshell():
-    shell = DbShell(url=app.config['DATABASE_URI'])
-    shell.run_shell()
-
+# or if your database url string is not at app.config['DATABASE_URI']
+manager.add_command('dbshell', DbShell(url_config_key='SQLALCHEMY_DATABASE_URI'))
 
 if __name__ == "__main__":
     manager.run()

@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='Flask-DbShell',
-    version='1.0',
+    version='2.0',
     url='http://github.com/ffeast/flask-dbshell/',
     license='BSD',
     author='ffeast',
@@ -19,6 +19,7 @@ setup(
     platforms='any',
     install_requires=[
         'Flask',
+        'Flask-Script',
     ],
     tests_require=[
         'mock>=1.0.1'

@@ -6,6 +6,10 @@ class PostgresqlBackend(BaseBackend):
     def compile_command(self):
         parts = []
         parts.append('psql')
+        connection_string = self._dburl.get_connection_string()
+        if connection_string:
+            parts.append(connection_string)
+            return parts
         if self._dburl.host:
             parts.append('--host=%s' % self._dburl.host)
         if self._dburl.port:

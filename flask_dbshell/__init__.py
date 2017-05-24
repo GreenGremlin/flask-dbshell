@@ -1,14 +1,27 @@
-from urlparse import urlsplit
+from urllib.parse import urlsplit
+
+from flask import current_app
+from flask_script import Command
 
 from .backends import load_backend
+from .compatibility import iteritems
 
 
-class DbShell(object):
+class DbShell(Command):
 
-    def __init__(self, **kwargs):
-        self._url = DbUrl(**kwargs)
+    def __init__(self, url_config_key='DATABASE_URI', **kwargs):
+        self._options = kwargs
+        self._url_config_key = url_config_key
+        self._url = DbUrl(**kwargs) if 'url' in kwargs else None
 
-    def run_shell(self):
+    def __call__(self, app=None, *args, **kwargs):
+        return self.run_shell(app)
+
+    def run_shell(self, app):
+        if self._url is None:
+            self._options['url'] = app.config[self._url_config_key]
+            self._url = DbUrl(**self._options)
+
         backend = load_backend(self._url)
         backend.run_shell()
 
@@ -32,6 +45,7 @@ class DbUrl(object):
     def __init__(self, url=None, **kwargs):
         parts = dict()
         if url is not None:
+            self.url = url
             o = urlsplit(url, allow_fragments=False)
             parts.update(backend=o.scheme or None,
                          database=o.path.lstrip('/') or None,
@@ -51,9 +65,24 @@ class DbUrl(object):
         self._set_parts(**parts)
 
     def _set_parts(self, **kwargs):
-        for key, val in kwargs.iteritems():
+        for key, val in iteritems(kwargs):
             if key not in self._KNOWN_PARTS:
                 raise AttributeError('Unknown argument: "%s"' % key)
             setattr(self, key, val)
         for key in set(self._KNOWN_PARTS) - set(kwargs.keys()):
             setattr(self, key, None)
+
+    def get_connection_string(self):
+        if not all([hasattr(self, key) for key in ['backend', 'user', 'host', 'database']]):
+            return None
+
+        password = ':{}'.format(self.password) if getattr(self, 'password', None) else ''
+        port = ':{}'.format(self.port) if getattr(self, 'port', None) else ''
+        return '{backend}://{user}{password}@{host}{port}/{database}'.format(
+            backend=self.backend,
+            user=self.user,
+            password=password,
+            host=self.host,
+            port=port,
+            database=self.database,
+        )
